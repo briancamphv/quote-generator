@@ -566,13 +566,31 @@ def open_file(path):
         print(f"  (Could not auto-open the file: {e})")
 
 
+def _find_soffice():
+    """Locate the LibreOffice 'soffice' executable, even if it isn't on PATH."""
+    found = shutil.which("soffice") or shutil.which("soffice.exe")
+    if found:
+        return found
+    candidates = [
+        r"C:\Program Files\LibreOffice\program\soffice.exe",
+        r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+        "/Applications/LibreOffice.app/Contents/MacOS/soffice",   # macOS
+        "/usr/bin/soffice", "/usr/local/bin/soffice",             # Linux
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return None
+
+
 def export_pdf(docx_path):
-    if shutil.which("soffice") is None:
+    soffice = _find_soffice()
+    if soffice is None:
         print("  (LibreOffice not found — skipping PDF export.)")
         return None
     outdir = os.path.dirname(os.path.abspath(docx_path))
     try:
-        subprocess.run(["soffice", "--headless", "--convert-to", "pdf",
+        subprocess.run([soffice, "--headless", "--convert-to", "pdf",
                         "--outdir", outdir, docx_path],
                        check=True, capture_output=True, timeout=120)
         pdf = os.path.splitext(docx_path)[0] + ".pdf"
